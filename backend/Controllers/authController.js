@@ -11,33 +11,52 @@ const register = async (req, res) => {
       password,
     } = req.body;
 
+    // Basic validation
+    if (!name || !employeeId || !department || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
     const existingEmployee =
-      await employeeModel.findEmployeeByEmail(email);
+      await employeeModel.findEmployeeByEmail(normalizedEmail);
 
     if (existingEmployee) {
       return res.status(400).json({
+        success: false,
         message: "Employee already exists",
       });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await employeeModel.createEmployee(
-      name,
-      employeeId,
-      department,
-      email,
+    const newEmployee = await employeeModel.createEmployee(
+      name.trim(),
+      employeeId.trim(),
+      department.trim(),
+      normalizedEmail,
       hashedPassword
     );
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "Employee registered successfully",
+      user: {
+        id: newEmployee?.id,
+        name: name.trim(),
+        email: normalizedEmail,
+        employeeId: employeeId.trim(),
+        department: department.trim(),
+        role: "employee",
+      },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Registration error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Registration failed",
       error: error.message,
@@ -50,8 +69,17 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
     const employee =
-      await employeeModel.findEmployeeByEmail(email);
+      await employeeModel.findEmployeeByEmail(normalizedEmail);
 
     if (!employee) {
       return res.status(401).json({
@@ -72,20 +100,32 @@ const login = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Login successful",
-      employee: {
+
+      // Frontend expects data.user
+      user: {
         id: employee.id,
-        full_name: employee.full_name,
+        name: employee.full_name,
         email: employee.email,
+        employeeId: employee.employee_id,
         department: employee.department,
+        role: employee.role || "employee",
+
+        // Default leave balance
+        leaveBalance: {
+          sick: employee.sick_leave ?? 10,
+          casual: employee.casual_leave ?? 10,
+          annual: employee.annual_leave ?? 15,
+          other: employee.other_leave ?? 10,
+        },
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Login error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Login failed",
       error: error.message,

@@ -9,18 +9,33 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors());
+// Middleware
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
+// Routes
 app.use("/api/auth", authRoutes);
 
+// Test route
 app.get("/", (req, res) => {
-  res.send("Backend is working successfully!");
+  res.json({
+    success: true,
+    message: "Backend is working successfully!",
+  });
 });
 
+// Database test route
 app.get("/test-db", async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT 1 + 1 AS result");
+    const [rows] = await db.query(
+      "SELECT 1 + 1 AS result"
+    );
 
     res.json({
       success: true,
@@ -28,7 +43,7 @@ app.get("/test-db", async (req, res) => {
       message: "Database connected successfully",
     });
   } catch (error) {
-    console.error(error);
+    console.error("Database test error:", error);
 
     res.status(500).json({
       success: false,
@@ -39,15 +54,19 @@ app.get("/test-db", async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, async () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+// Important: 0.0.0.0 means backend can accept
+// requests from other devices on the same network
+app.listen(PORT, "0.0.0.0", async () => {
+  console.log(`Server running on port ${PORT}`);
 
   try {
     const connection = await db.getConnection();
+
     console.log("MySQL Connected Successfully");
+
     connection.release();
   } catch (err) {
     console.error("Database connection failed:");
-    console.error(err);
+    console.error(err.message);
   }
 });

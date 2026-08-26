@@ -1,8 +1,15 @@
 import React from 'react';
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import {
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+} from 'react-router-dom';
+
 import ProtectedRoute from './ProtectedRoute';
 import Layout from '../components/layout/Layout';
 import { useAuth } from '../hooks/useAuth';
+import Loader from '../components/common/Loader';
 
 // Pages
 import Login from '../pages/Login';
@@ -14,6 +21,10 @@ import LeaveHistory from '../pages/LeaveHistory';
 import Profile from '../pages/Profile';
 import NotFound from '../pages/NotFound';
 
+// ==============================
+// PROTECTED LAYOUT
+// ==============================
+
 const RouteLayoutWrapper = () => {
   return (
     <ProtectedRoute>
@@ -24,47 +35,91 @@ const RouteLayoutWrapper = () => {
   );
 };
 
+// ==============================
+// APP ROUTES
+// ==============================
+
 const AppRoutes = () => {
-  const { user, isAuthenticated } = useAuth();
+  const {
+    user,
+    loading,
+    isAuthenticated,
+  } = useAuth();
 
-  const getRootRedirect = () => {
-    if (!isAuthenticated || !user) {
-      return <Navigate to="/login" replace />;
-    }
+  // Auth session restore ayye varaku
+  // routes redirect avvakunda wait chestundi
+  if (loading) {
+    return <Loader />;
+  }
 
-    return <Navigate to="/dashboard" replace />;
-  };
+  const isLoggedIn =
+    Boolean(isAuthenticated && user);
 
   return (
     <Routes>
 
-      {/* Public Routes */}
+      {/* =========================
+          PUBLIC ROUTES
+      ========================== */}
+
       <Route
         path="/login"
         element={
-          !isAuthenticated
-            ? <Login />
-            : <Navigate to="/dashboard" replace />
+          isLoggedIn
+            ? (
+              <Navigate
+                to="/dashboard"
+                replace
+              />
+            )
+            : <Login />
         }
       />
 
       <Route
         path="/register"
         element={
-          !isAuthenticated
-            ? <Register />
-            : <Navigate to="/dashboard" replace />
+          isLoggedIn
+            ? (
+              <Navigate
+                to="/dashboard"
+                replace
+              />
+            )
+            : <Register />
         }
       />
 
-      {/* Root */}
+      {/* =========================
+          ROOT ROUTE
+      ========================== */}
+
       <Route
         path="/"
-        element={getRootRedirect()}
+        element={
+          isLoggedIn
+            ? (
+              <Navigate
+                to="/dashboard"
+                replace
+              />
+            )
+            : (
+              <Navigate
+                to="/login"
+                replace
+              />
+            )
+        }
       />
 
-      {/* Protected Routes */}
-      <Route element={<RouteLayoutWrapper />}>
+      {/* =========================
+          PROTECTED ROUTES
+      ========================== */}
+
+      <Route
+        element={<RouteLayoutWrapper />}
+      >
 
         <Route
           path="/dashboard"
@@ -93,13 +148,21 @@ const AppRoutes = () => {
 
       </Route>
 
-      {/* 404 */}
+      {/* =========================
+          404 PAGE
+      ========================== */}
+
       <Route
         path="*"
         element={
-          isAuthenticated
-            ? <Navigate to="/dashboard" replace />
-            : <Navigate to="/login" replace />
+          isLoggedIn
+            ? (
+              <Navigate
+                to="/dashboard"
+                replace
+              />
+            )
+            : <NotFound />
         }
       />
 
