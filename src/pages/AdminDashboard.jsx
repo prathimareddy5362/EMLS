@@ -40,66 +40,112 @@ const AdminDashboard = () => {
   const [loading, setLoading] =
     useState(true);
 
+  const [actionLoading, setActionLoading] =
+    useState(false);
+
   const [error, setError] =
     useState('');
+
+  // ==============================
+  // FORMAT DATE
+  // ==============================
+
+  const formatDate = (date) => {
+
+    if (!date) {
+      return '-';
+    }
+
+    const normalizedDate =
+      String(date).split('T')[0];
+
+    const parsedDate =
+      new Date(
+        `${normalizedDate}T00:00:00`
+      );
+
+    if (
+      Number.isNaN(
+        parsedDate.getTime()
+      )
+    ) {
+      return normalizedDate;
+    }
+
+    return parsedDate.toLocaleDateString(
+      'en-IN',
+      {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      }
+    );
+  };
 
   // ==============================
   // FETCH DASHBOARD DATA
   // ==============================
 
   const fetchDashboardData = async () => {
+
     try {
 
       setLoading(true);
 
       setError('');
 
-      // --------------------------
+      // ==========================
       // GET REPORT DATA
-      // --------------------------
+      // ==========================
 
       const reportResponse =
         await reportAPI.getReportData();
 
       setReportData(
-        reportResponse
+        reportResponse || null
       );
 
-      // --------------------------
+      // ==========================
       // GET ALL LEAVES
       // ADMIN ONLY
-      // --------------------------
+      // ==========================
 
       const leaveResponse =
         await leaveAPI.getAllLeaves();
 
-      if (!leaveResponse.success) {
+      if (!leaveResponse?.success) {
+
         throw new Error(
-          leaveResponse.message ||
+          leaveResponse?.message ||
           'Failed to fetch leave requests'
         );
+
       }
 
-      // Make sure leaves is always an array
+      // ==========================
+      // SAFE ARRAY
+      // ==========================
 
       const allLeaves =
         Array.isArray(
-          leaveResponse.leaves
+          leaveResponse?.leaves
         )
           ? leaveResponse.leaves
           : [];
 
-      // --------------------------
-      // FILTER PENDING REQUESTS
-      // --------------------------
+      // ==========================
+      // FILTER PENDING
+      // ==========================
 
       const pending =
         allLeaves.filter(
           (leave) =>
-            leave.status === 'pending'
+            leave?.status === 'pending'
         );
 
-      // Show only first 3 requests
+      // ==========================
+      // SHOW FIRST 3
+      // ==========================
 
       setPendingRequests(
         pending.slice(0, 3)
@@ -113,9 +159,11 @@ const AdminDashboard = () => {
       );
 
       setError(
-        error.message ||
+        error?.message ||
         'Failed to load dashboard data'
       );
+
+      setPendingRequests([]);
 
     } finally {
 
@@ -145,16 +193,67 @@ const AdminDashboard = () => {
 
     try {
 
-      setLoading(true);
+      setActionLoading(true);
 
       setError('');
 
-      await leaveAPI.updateStatus(
-        id,
-        status
-      );
+      let rejectionReason = '';
 
-      // Refresh dashboard data
+      // ==========================
+      // REJECTION REASON
+      // ==========================
+
+      if (status === 'rejected') {
+
+        rejectionReason =
+          window.prompt(
+            'Enter rejection reason:'
+          );
+
+        // User cancelled
+
+        if (rejectionReason === null) {
+          return;
+        }
+
+        // Empty reason
+
+        if (
+          !rejectionReason.trim()
+        ) {
+
+          alert(
+            'Rejection reason is required'
+          );
+
+          return;
+        }
+
+      }
+
+      // ==========================
+      // API REQUEST
+      // ==========================
+
+      const response =
+        await leaveAPI.updateStatus(
+          id,
+          status,
+          rejectionReason
+        );
+
+      if (!response?.success) {
+
+        throw new Error(
+          response?.message ||
+          'Failed to update leave request'
+        );
+
+      }
+
+      // ==========================
+      // REFRESH DATA
+      // ==========================
 
       await fetchDashboardData();
 
@@ -165,19 +264,17 @@ const AdminDashboard = () => {
         error
       );
 
-      alert(
-        error.message ||
-        'Failed to update leave request'
-      );
+      const message =
+        error?.message ||
+        'Failed to update leave request';
 
-      setError(
-        error.message ||
-        'Failed to update leave request'
-      );
+      alert(message);
+
+      setError(message);
 
     } finally {
 
-      setLoading(false);
+      setActionLoading(false);
 
     }
   };
@@ -196,14 +293,17 @@ const AdminDashboard = () => {
   // DEFAULT REPORT DATA
   // ==============================
 
-  const { totals } =
-    reportData || {
-      totals: {
-        totalEmployees: 0,
-        totalRequests: 0,
-        pendingRequests: 0,
-        approvedRequests: 0,
-      },
+  const totals =
+    reportData?.totals || {
+
+      totalEmployees: 0,
+
+      totalRequests: 0,
+
+      pendingRequests: 0,
+
+      approvedRequests: 0,
+
     };
 
   // ==============================
@@ -237,7 +337,6 @@ const AdminDashboard = () => {
         </div>
 
       </div>
-
 
       {/* ========================= */}
       {/* ERROR MESSAGE */}
@@ -276,26 +375,19 @@ const AdminDashboard = () => {
 
       )}
 
-
       {/* ========================= */}
       {/* DASHBOARD METRICS */}
       {/* ========================= */}
 
       <div className="dashboard-grid">
 
-
         {/* TOTAL EMPLOYEES */}
 
         <Card
           style={{
-            display:
-              'flex',
-
-            alignItems:
-              'center',
-
-            gap:
-              '1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1.25rem',
           }}
         >
 
@@ -324,7 +416,6 @@ const AdminDashboard = () => {
 
           </div>
 
-
           <div>
 
             <h3
@@ -336,7 +427,7 @@ const AdminDashboard = () => {
                   700,
               }}
             >
-              {totals.totalEmployees}
+              {totals.totalEmployees || 0}
             </h3>
 
             <span
@@ -355,19 +446,13 @@ const AdminDashboard = () => {
 
         </Card>
 
-
         {/* TOTAL REQUESTS */}
 
         <Card
           style={{
-            display:
-              'flex',
-
-            alignItems:
-              'center',
-
-            gap:
-              '1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1.25rem',
           }}
         >
 
@@ -375,9 +460,6 @@ const AdminDashboard = () => {
             style={{
               background:
                 'var(--primary-gradient)',
-
-              opacity:
-                0.85,
 
               color:
                 '#fff',
@@ -399,7 +481,6 @@ const AdminDashboard = () => {
 
           </div>
 
-
           <div>
 
             <h3
@@ -411,7 +492,7 @@ const AdminDashboard = () => {
                   700,
               }}
             >
-              {totals.totalRequests}
+              {totals.totalRequests || 0}
             </h3>
 
             <span
@@ -430,19 +511,13 @@ const AdminDashboard = () => {
 
         </Card>
 
-
         {/* PENDING REQUESTS */}
 
         <Card
           style={{
-            display:
-              'flex',
-
-            alignItems:
-              'center',
-
-            gap:
-              '1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1.25rem',
           }}
         >
 
@@ -471,7 +546,6 @@ const AdminDashboard = () => {
 
           </div>
 
-
           <div>
 
             <h3
@@ -483,7 +557,7 @@ const AdminDashboard = () => {
                   700,
               }}
             >
-              {totals.pendingRequests}
+              {totals.pendingRequests || 0}
             </h3>
 
             <span
@@ -502,19 +576,13 @@ const AdminDashboard = () => {
 
         </Card>
 
-
         {/* APPROVED REQUESTS */}
 
         <Card
           style={{
-            display:
-              'flex',
-
-            alignItems:
-              'center',
-
-            gap:
-              '1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1.25rem',
           }}
         >
 
@@ -543,7 +611,6 @@ const AdminDashboard = () => {
 
           </div>
 
-
           <div>
 
             <h3
@@ -555,7 +622,7 @@ const AdminDashboard = () => {
                   700,
               }}
             >
-              {totals.approvedRequests}
+              {totals.approvedRequests || 0}
             </h3>
 
             <span
@@ -576,13 +643,11 @@ const AdminDashboard = () => {
 
       </div>
 
-
       {/* ========================= */}
-      {/* MAIN DASHBOARD CONTENT */}
+      {/* MAIN CONTENT */}
       {/* ========================= */}
 
       <div className="layout-grid">
-
 
         {/* ========================= */}
         {/* MODERATION QUEUE */}
@@ -607,7 +672,6 @@ const AdminDashboard = () => {
                 '100%',
             }}
           >
-
 
             {/* HEADER */}
 
@@ -652,7 +716,6 @@ const AdminDashboard = () => {
 
               </div>
 
-
               <Link
                 to="/leave-requests"
 
@@ -672,10 +735,13 @@ const AdminDashboard = () => {
 
             </div>
 
+            {/* LOADING */}
 
-            {/* NO PENDING REQUESTS */}
+            {loading ? (
 
-            {pendingRequests.length === 0 ? (
+              <Loader />
+
+            ) : pendingRequests.length === 0 ? (
 
               <div
                 style={{
@@ -721,15 +787,12 @@ const AdminDashboard = () => {
                 }}
               >
 
-
-                {/* PENDING REQUEST LIST */}
-
                 {pendingRequests.map(
                   (req, index) => (
 
                     <div
                       key={
-                        req.id ||
+                        req?.id ||
                         index
                       }
 
@@ -762,7 +825,6 @@ const AdminDashboard = () => {
                           '1rem',
                       }}
                     >
-
 
                       {/* EMPLOYEE DETAILS */}
 
@@ -797,7 +859,6 @@ const AdminDashboard = () => {
                               `User #${req.userId}`}
                           </span>
 
-
                           {req.department && (
 
                             <span
@@ -815,7 +876,6 @@ const AdminDashboard = () => {
                           )}
 
                         </div>
-
 
                         {/* LEAVE TYPE */}
 
@@ -837,11 +897,10 @@ const AdminDashboard = () => {
                                 'var(--primary)',
                             }}
                           >
-                            {req.leaveType}
+                            {req.leaveType || '-'}
                           </strong>
 
                         </p>
-
 
                         {/* DATES */}
 
@@ -855,12 +914,19 @@ const AdminDashboard = () => {
                           }}
                         >
 
-                          Dates: {req.startDate}
+                          Dates:{' '}
+
+                          {formatDate(
+                            req.startDate
+                          )}
+
                           {' '}to{' '}
-                          {req.endDate}
+
+                          {formatDate(
+                            req.endDate
+                          )}
 
                         </p>
-
 
                         {/* REASON */}
 
@@ -880,12 +946,11 @@ const AdminDashboard = () => {
                           }}
                         >
 
-                          "{req.reason}"
+                          "{req.reason || 'No reason provided'}"
 
                         </p>
 
                       </div>
-
 
                       {/* ACTION BUTTONS */}
 
@@ -899,10 +964,12 @@ const AdminDashboard = () => {
                         }}
                       >
 
+                        {/* APPROVE */}
+
                         <Button
                           variant="success"
 
-                          loading={loading}
+                          loading={actionLoading}
 
                           onClick={() =>
                             handleAction(
@@ -924,11 +991,12 @@ const AdminDashboard = () => {
 
                         </Button>
 
+                        {/* REJECT */}
 
                         <Button
                           variant="danger"
 
-                          loading={loading}
+                          loading={actionLoading}
 
                           onClick={() =>
                             handleAction(
@@ -965,7 +1033,6 @@ const AdminDashboard = () => {
 
         </div>
 
-
         {/* ========================= */}
         {/* QUICK ACTIONS */}
         {/* ========================= */}
@@ -990,7 +1057,6 @@ const AdminDashboard = () => {
             }}
           >
 
-
             <h3
               style={{
                 fontSize:
@@ -1002,7 +1068,6 @@ const AdminDashboard = () => {
             >
               Quick Actions
             </h3>
-
 
             <p
               style={{
@@ -1018,7 +1083,6 @@ const AdminDashboard = () => {
             >
               Common system administration functions
             </p>
-
 
             <div
               style={{
@@ -1036,8 +1100,7 @@ const AdminDashboard = () => {
               }}
             >
 
-
-              {/* MANAGE EMPLOYEES */}
+              {/* EMPLOYEES */}
 
               <Link
                 to="/employees"
@@ -1090,8 +1153,7 @@ const AdminDashboard = () => {
 
               </Link>
 
-
-              {/* MODERATION QUEUE */}
+              {/* LEAVE REQUESTS */}
 
               <Link
                 to="/leave-requests"
@@ -1139,11 +1201,10 @@ const AdminDashboard = () => {
                       'var(--text-muted)',
                   }}
                 >
-                  {totals.pendingRequests} reviews pending
+                  {totals.pendingRequests || 0} reviews pending
                 </span>
 
               </Link>
-
 
               {/* REPORTS */}
 

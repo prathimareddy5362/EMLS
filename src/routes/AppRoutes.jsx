@@ -10,7 +10,7 @@ import ProtectedRoute from './ProtectedRoute';
 import Layout from '../components/layout/Layout';
 import { useAuth } from '../hooks/useAuth';
 import Loader from '../components/common/Loader';
-
+import AdminDashboard from '../pages/AdminDashboard';
 // Pages
 import Login from '../pages/Login';
 import Register from '../pages/Register';
@@ -145,7 +145,10 @@ const AppRoutes = () => {
           path="/profile"
           element={<Profile />}
         />
-
+        <Route
+          path="/admin"
+          element={<AdminDashboard />}
+        />
       </Route>
 
       {/* =========================
