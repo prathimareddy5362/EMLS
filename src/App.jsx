@@ -4,7 +4,6 @@ import { AuthProvider } from './context/AuthContext';
 import AppRoutes from './routes/AppRoutes';
 import './styles/globals.css';
 import './styles/glass.css';
-
 function App() {
   return (
     <Router>
