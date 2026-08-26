@@ -10,23 +10,62 @@ const API_URL =
 
 const axiosInstance = axios.create({
   baseURL: API_URL,
+
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Automatically attach token
+// ==============================
+// REQUEST INTERCEPTOR
+// Automatically attach JWT token
+// ==============================
+
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('elms_token');
+    const token =
+      localStorage.getItem('elms_token');
 
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization =
+        `Bearer ${token}`;
     }
 
     return config;
   },
-  (error) => Promise.reject(error)
+
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// ==============================
+// RESPONSE INTERCEPTOR
+// Handle expired / invalid token
+// ==============================
+
+axiosInstance.interceptors.response.use(
+  (response) => response,
+
+  (error) => {
+    if (
+      error.response?.status === 401
+    ) {
+      localStorage.removeItem(
+        'elms_token'
+      );
+
+      localStorage.removeItem(
+        'elms_user'
+      );
+
+      localStorage.removeItem(
+        'elms_user_id'
+      );
+    }
+
+    return Promise.reject(error);
+  }
 );
 
 // ==============================
@@ -34,83 +73,83 @@ axiosInstance.interceptors.request.use(
 // ==============================
 
 export const authAPI = {
+
   // --------------------------
   // LOGIN
   // --------------------------
-  login: async (email, password) => {
+
+  login: async (
+    email,
+    password
+  ) => {
     try {
-      const response = await axiosInstance.post(
-        '/auth/login',
-        {
-          email,
-          password,
-        }
-      );
+      const response =
+        await axiosInstance.post(
+          '/auth/login',
+          {
+            email,
+            password,
+          }
+        );
 
-      const data = response.data;
+      const data =
+        response.data;
 
-      /*
-        Backend may return:
-
-        {
-          success: true,
-          message: "Login successful",
-          employee: {...}
-        }
-
-        OR future backend:
-
-        {
-          success: true,
-          token: "...",
-          user: {...}
-        }
-      */
-
-      const backendUser =
-        data.user || data.employee;
-
-      if (!backendUser) {
+      if (!data.success) {
         throw new Error(
           data.message ||
-            'User data not received from server'
+          'Login failed'
         );
       }
 
-      // Normalize backend user fields
+      if (!data.user) {
+        throw new Error(
+          'User data not received from server'
+        );
+      }
+
+      if (!data.token) {
+        throw new Error(
+          'Authentication token not received'
+        );
+      }
+
+      // Normalize user data
+
       const user = {
-        id: backendUser.id,
+        id:
+          data.user.id,
 
         name:
-          backendUser.name ||
-          backendUser.full_name ||
+          data.user.name ||
           '',
 
         email:
-          backendUser.email || '',
+          data.user.email ||
+          '',
 
         employeeId:
-          backendUser.employeeId ||
-          backendUser.employee_id ||
+          data.user.employeeId ||
           '',
 
         department:
-          backendUser.department || '',
+          data.user.department ||
+          '',
 
         role:
-          backendUser.role ||
+          data.user.role ||
           'employee',
 
         designation:
-          backendUser.designation ||
+          data.user.designation ||
           'Employee',
 
         profilePhoto:
-          backendUser.profilePhoto ||
+          data.user.profilePhoto ||
           '',
 
         leaveBalance:
-          backendUser.leaveBalance || {
+          data.user.leaveBalance || {
             sick: 10,
             casual: 10,
             annual: 15,
@@ -118,51 +157,40 @@ export const authAPI = {
           },
       };
 
-      // Use backend token if available
-      // Otherwise create temporary session token
-      const token =
-        data.token ||
-        `session-${user.id}`;
-
-      // Save session
-      localStorage.setItem(
-        'elms_token',
-        token
-      );
-
-      localStorage.setItem(
-        'elms_user_id',
-        String(user.id)
-      );
-
-      localStorage.setItem(
-        'elms_user',
-        JSON.stringify(user)
-      );
-
       return {
         success: true,
+
         message:
           data.message ||
           'Login successful',
 
-        token,
+        token:
+          data.token,
+
         user,
       };
+
     } catch (error) {
+
       const message =
         error.response?.data?.message ||
         error.message ||
         'Login failed';
 
-      throw new Error(message);
+      throw new Error(
+        message
+      );
     }
   },
+
 
   // --------------------------
   // REGISTER
   // --------------------------
-  register: async (userData) => {
+
+  register: async (
+    userData
+  ) => {
     try {
       const response =
         await axiosInstance.post(
@@ -170,20 +198,36 @@ export const authAPI = {
           userData
         );
 
-      return response.data;
+      const data =
+        response.data;
+
+      if (!data.success) {
+        throw new Error(
+          data.message ||
+          'Registration failed'
+        );
+      }
+
+      return data;
+
     } catch (error) {
+
       const message =
         error.response?.data?.message ||
         error.message ||
         'Registration failed';
 
-      throw new Error(message);
+      throw new Error(
+        message
+      );
     }
   },
+
 
   // --------------------------
   // GET CURRENT USER
   // --------------------------
+
   getCurrentUser: async () => {
     try {
       const response =
@@ -191,50 +235,58 @@ export const authAPI = {
           '/auth/me'
         );
 
-      const data = response.data;
+      const data =
+        response.data;
 
-      const backendUser =
-        data.user || data.employee;
+      if (!data.success) {
+        throw new Error(
+          data.message ||
+          'Failed to get current user'
+        );
+      }
 
-      if (!backendUser) {
+      if (!data.user) {
         throw new Error(
           'User data not received'
         );
       }
 
+      // Normalize user data
+
       const user = {
-        id: backendUser.id,
+        id:
+          data.user.id,
 
         name:
-          backendUser.name ||
-          backendUser.full_name ||
+          data.user.name ||
           '',
 
         email:
-          backendUser.email || '',
+          data.user.email ||
+          '',
 
         employeeId:
-          backendUser.employeeId ||
-          backendUser.employee_id ||
+          data.user.employeeId ||
           '',
 
         department:
-          backendUser.department || '',
+          data.user.department ||
+          '',
 
         role:
-          backendUser.role ||
+          data.user.role ||
           'employee',
 
         designation:
-          backendUser.designation ||
+          data.user.designation ||
           'Employee',
 
         profilePhoto:
-          backendUser.profilePhoto ||
+          data.user.profilePhoto ||
           '',
 
         leaveBalance:
-          backendUser.leaveBalance || {
+          data.user.leaveBalance || {
             sick: 10,
             casual: 10,
             annual: 15,
@@ -243,94 +295,135 @@ export const authAPI = {
       };
 
       return {
-        ...data,
+        success: true,
+
         user,
       };
+
     } catch (error) {
+
       const message =
         error.response?.data?.message ||
         error.message ||
         'Failed to get current user';
 
-      throw new Error(message);
+      throw new Error(
+        message
+      );
     }
   },
+
 
   // --------------------------
   // LOGOUT
   // --------------------------
+
   logout: () => {
+
     localStorage.removeItem(
       'elms_token'
     );
 
     localStorage.removeItem(
-      'elms_user_id'
+      'elms_user'
     );
 
     localStorage.removeItem(
-      'elms_user'
+      'elms_user_id'
     );
   },
 };
+
+
+// ==============================
+// LEAVE API
+// ==============================
 
 // ==============================
 // LEAVE API
 // ==============================
 
 export const leaveAPI = {
-  // --------------------------
-  // GET LEAVES
-  // --------------------------
-  getLeaves: async (userId = null) => {
-    try {
-      const url = userId
-        ? `/leaves?userId=${userId}`
-        : '/leaves';
 
+  // --------------------------
+  // GET MY LEAVES
+  // --------------------------
+
+  getLeaves: async () => {
+    try {
       const response =
-        await axiosInstance.get(url);
+        await axiosInstance.get(
+          "/leaves"
+        );
 
       return response.data;
+
     } catch (error) {
-      const message =
+      throw new Error(
         error.response?.data?.message ||
         error.message ||
-        'Failed to fetch leaves';
+        "Failed to fetch leave requests"
+      );
+    }
+  },
 
-      throw new Error(message);
+  // --------------------------
+  // GET ALL LEAVES
+  // ADMIN ONLY
+  // --------------------------
+
+  getAllLeaves: async () => {
+    try {
+      const response =
+        await axiosInstance.get(
+          "/leaves/all"
+        );
+
+      return response.data;
+
+    } catch (error) {
+      throw new Error(
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to fetch all leave requests"
+      );
     }
   },
 
   // --------------------------
   // APPLY LEAVE
   // --------------------------
-  applyLeave: async (leaveData) => {
+
+  applyLeave: async (
+    leaveData
+  ) => {
     try {
       const response =
         await axiosInstance.post(
-          '/leaves',
+          "/leaves",
           leaveData
         );
 
       return response.data;
+
     } catch (error) {
-      const message =
+      throw new Error(
         error.response?.data?.message ||
         error.message ||
-        'Failed to apply leave';
-
-      throw new Error(message);
+        "Failed to apply leave"
+      );
     }
   },
 
   // --------------------------
   // UPDATE LEAVE STATUS
+  // ADMIN ONLY
   // --------------------------
+
   updateStatus: async (
     leaveId,
     status,
-    rejectionReason = ''
+    rejectionReason = ""
   ) => {
     try {
       const response =
@@ -343,13 +436,13 @@ export const leaveAPI = {
         );
 
       return response.data;
+
     } catch (error) {
-      const message =
+      throw new Error(
         error.response?.data?.message ||
         error.message ||
-        'Failed to update leave status';
-
-      throw new Error(message);
+        "Failed to update leave status"
+      );
     }
   },
 };
@@ -359,9 +452,12 @@ export const leaveAPI = {
 // ==============================
 
 export const employeeAPI = {
+
+
   // --------------------------
   // GET EMPLOYEES
   // --------------------------
+
   getEmployees: async () => {
     try {
       const response =
@@ -370,19 +466,22 @@ export const employeeAPI = {
         );
 
       return response.data;
+
     } catch (error) {
-      const message =
+
+      throw new Error(
         error.response?.data?.message ||
         error.message ||
-        'Failed to fetch employees';
-
-      throw new Error(message);
+        'Failed to fetch employees'
+      );
     }
   },
+
 
   // --------------------------
   // ADD EMPLOYEE
   // --------------------------
+
   addEmployee: async (
     employeeData
   ) => {
@@ -394,19 +493,22 @@ export const employeeAPI = {
         );
 
       return response.data;
+
     } catch (error) {
-      const message =
+
+      throw new Error(
         error.response?.data?.message ||
         error.message ||
-        'Failed to add employee';
-
-      throw new Error(message);
+        'Failed to add employee'
+      );
     }
   },
+
 
   // --------------------------
   // UPDATE EMPLOYEE
   // --------------------------
+
   updateEmployee: async (
     id,
     employeeData
@@ -419,20 +521,25 @@ export const employeeAPI = {
         );
 
       return response.data;
+
     } catch (error) {
-      const message =
+
+      throw new Error(
         error.response?.data?.message ||
         error.message ||
-        'Failed to update employee';
-
-      throw new Error(message);
+        'Failed to update employee'
+      );
     }
   },
+
 
   // --------------------------
   // DELETE EMPLOYEE
   // --------------------------
-  deleteEmployee: async (id) => {
+
+  deleteEmployee: async (
+    id
+  ) => {
     try {
       const response =
         await axiosInstance.delete(
@@ -440,22 +547,30 @@ export const employeeAPI = {
         );
 
       return response.data;
+
     } catch (error) {
-      const message =
+
+      throw new Error(
         error.response?.data?.message ||
         error.message ||
-        'Failed to delete employee';
-
-      throw new Error(message);
+        'Failed to delete employee'
+      );
     }
   },
 };
+
 
 // ==============================
 // REPORT API
 // ==============================
 
 export const reportAPI = {
+
+
+  // --------------------------
+  // GET REPORT DATA
+  // --------------------------
+
   getReportData: async () => {
     try {
       const response =
@@ -464,16 +579,21 @@ export const reportAPI = {
         );
 
       return response.data;
+
     } catch (error) {
+
       const message =
         error.response?.data?.message ||
         error.message ||
         'Failed to fetch report data';
 
-      throw new Error(message);
+      throw new Error(
+        message
+      );
     }
   },
 };
+
 
 // ==============================
 // EXPORT AXIOS INSTANCE

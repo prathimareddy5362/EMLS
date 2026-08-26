@@ -17,51 +17,74 @@ export const AuthProvider = ({ children }) => {
     useState(false);
 
   // ==============================
+  // CLEAR AUTH DATA
+  // ==============================
+
+  const clearAuthData = () => {
+    localStorage.removeItem('elms_user');
+    localStorage.removeItem('elms_token');
+    localStorage.removeItem('elms_user_id');
+  };
+
+  // ==============================
   // RESTORE LOGIN SESSION
   // ==============================
 
   useEffect(() => {
-    const initializeAuth = () => {
+    const initializeAuth = async () => {
       try {
-        const savedUser =
-          localStorage.getItem('elms_user');
-
         const token =
           localStorage.getItem('elms_token');
 
-        if (savedUser && token) {
-          const parsedUser =
-            JSON.parse(savedUser);
-
-          setUser(parsedUser);
-
-          setIsAuthenticated(true);
-        } else {
+        // Token lekapothe login session ledu
+        if (!token) {
           setUser(null);
-
           setIsAuthenticated(false);
+          return;
         }
+
+        // Backend nundi current logged-in user ni fetch chestham
+        const response =
+          await authAPI.getCurrentUser();
+
+        const currentUser =
+          response.user;
+
+        if (!currentUser) {
+          throw new Error(
+            'User data not received'
+          );
+        }
+
+        // Latest user data state lo save
+        setUser(currentUser);
+
+        setIsAuthenticated(true);
+
+        // Local storage update
+        localStorage.setItem(
+          'elms_user',
+          JSON.stringify(currentUser)
+        );
+
+        localStorage.setItem(
+          'elms_user_id',
+          String(currentUser.id)
+        );
+
       } catch (error) {
         console.error(
-          'Failed to restore user:',
+          'Failed to restore login session:',
           error
         );
 
-        localStorage.removeItem(
-          'elms_user'
-        );
-
-        localStorage.removeItem(
-          'elms_token'
-        );
-
-        localStorage.removeItem(
-          'elms_user_id'
-        );
+        // Token invalid/expired ayithe clear
+        clearAuthData();
 
         setUser(null);
 
         setIsAuthenticated(false);
+
       } finally {
         setLoading(false);
       }
@@ -87,7 +110,11 @@ export const AuthProvider = ({ children }) => {
           password
         );
 
-      const loggedUser = data.user;
+      const loggedUser =
+        data.user;
+
+      const token =
+        data.token;
 
       if (!loggedUser) {
         throw new Error(
@@ -95,21 +122,27 @@ export const AuthProvider = ({ children }) => {
         );
       }
 
+      if (!token) {
+        throw new Error(
+          'Login failed. Authentication token not received.'
+        );
+      }
+
+      // State update
       setUser(loggedUser);
 
       setIsAuthenticated(true);
 
+      // Save login session
       localStorage.setItem(
         'elms_user',
         JSON.stringify(loggedUser)
       );
 
-      if (data.token) {
-        localStorage.setItem(
-          'elms_token',
-          data.token
-        );
-      }
+      localStorage.setItem(
+        'elms_token',
+        token
+      );
 
       localStorage.setItem(
         'elms_user_id',
@@ -119,21 +152,11 @@ export const AuthProvider = ({ children }) => {
       return loggedUser;
 
     } catch (error) {
+      clearAuthData();
+
       setUser(null);
 
       setIsAuthenticated(false);
-
-      localStorage.removeItem(
-        'elms_user'
-      );
-
-      localStorage.removeItem(
-        'elms_token'
-      );
-
-      localStorage.removeItem(
-        'elms_user_id'
-      );
 
       throw error;
 
@@ -158,9 +181,6 @@ export const AuthProvider = ({ children }) => {
         );
 
       return response;
-
-    } catch (error) {
-      throw error;
 
     } finally {
       setLoading(false);

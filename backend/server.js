@@ -4,12 +4,16 @@ const dotenv = require("dotenv");
 const db = require("./config/db");
 
 const authRoutes = require("./routes/authRoutes");
+const leaveRoutes = require("./routes/leaveRoutes");
 
 dotenv.config();
 
 const app = express();
 
-// Middleware
+// ==============================
+// MIDDLEWARE
+// ==============================
+
 app.use(
   cors({
     origin: true,
@@ -19,10 +23,18 @@ app.use(
 
 app.use(express.json());
 
-// Routes
+// ==============================
+// ROUTES
+// ==============================
+
 app.use("/api/auth", authRoutes);
 
-// Test route
+app.use("/api/leaves", leaveRoutes);
+
+// ==============================
+// TEST ROUTE
+// ==============================
+
 app.get("/", (req, res) => {
   res.json({
     success: true,
@@ -30,7 +42,10 @@ app.get("/", (req, res) => {
   });
 });
 
-// Database test route
+// ==============================
+// DATABASE TEST ROUTE
+// ==============================
+
 app.get("/test-db", async (req, res) => {
   try {
     const [rows] = await db.query(
@@ -52,10 +67,12 @@ app.get("/test-db", async (req, res) => {
   }
 });
 
+// ==============================
+// SERVER
+// ==============================
+
 const PORT = process.env.PORT || 5000;
 
-// Important: 0.0.0.0 means backend can accept
-// requests from other devices on the same network
 app.listen(PORT, "0.0.0.0", async () => {
   console.log(`Server running on port ${PORT}`);
 
