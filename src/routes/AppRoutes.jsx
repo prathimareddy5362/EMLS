@@ -1,4 +1,5 @@
 import React from 'react';
+
 import {
   Routes,
   Route,
@@ -7,18 +8,29 @@ import {
 } from 'react-router-dom';
 
 import ProtectedRoute from './ProtectedRoute';
+
 import Layout from '../components/layout/Layout';
+
 import { useAuth } from '../hooks/useAuth';
+
 import Loader from '../components/common/Loader';
-import AdminDashboard from '../pages/AdminDashboard';
-// Pages
+
+// ==============================
+// PAGES
+// ==============================
+
 import Login from '../pages/Login';
 import Register from '../pages/Register';
+
 import Dashboard from '../pages/Dashboard';
+import AdminDashboard from '../pages/AdminDashboard';
+
 import ApplyLeave from '../pages/ApplyLeave';
 import MyLeaves from '../pages/MyLeaves';
 import LeaveHistory from '../pages/LeaveHistory';
+
 import Profile from '../pages/Profile';
+
 import NotFound from '../pages/NotFound';
 
 // ==============================
@@ -46,8 +58,8 @@ const AppRoutes = () => {
     isAuthenticated,
   } = useAuth();
 
-  // Auth session restore ayye varaku
-  // routes redirect avvakunda wait chestundi
+  // Wait until auth session is restored
+
   if (loading) {
     return <Loader />;
   }
@@ -55,11 +67,23 @@ const AppRoutes = () => {
   const isLoggedIn =
     Boolean(isAuthenticated && user);
 
+  // ==============================
+  // ROLE BASED HOME
+  // ==============================
+
+  const getHomeRoute = () => {
+    if (user?.role === 'admin') {
+      return '/admin';
+    }
+
+    return '/dashboard';
+  };
+
   return (
     <Routes>
 
       {/* =========================
-          PUBLIC ROUTES
+          LOGIN
       ========================== */}
 
       <Route
@@ -68,13 +92,19 @@ const AppRoutes = () => {
           isLoggedIn
             ? (
               <Navigate
-                to="/dashboard"
+                to={getHomeRoute()}
                 replace
               />
             )
-            : <Login />
+            : (
+              <Login />
+            )
         }
       />
+
+      {/* =========================
+          REGISTER
+      ========================== */}
 
       <Route
         path="/register"
@@ -82,16 +112,18 @@ const AppRoutes = () => {
           isLoggedIn
             ? (
               <Navigate
-                to="/dashboard"
+                to={getHomeRoute()}
                 replace
               />
             )
-            : <Register />
+            : (
+              <Register />
+            )
         }
       />
 
       {/* =========================
-          ROOT ROUTE
+          ROOT
       ========================== */}
 
       <Route
@@ -100,7 +132,7 @@ const AppRoutes = () => {
           isLoggedIn
             ? (
               <Navigate
-                to="/dashboard"
+                to={getHomeRoute()}
                 replace
               />
             )
@@ -121,38 +153,64 @@ const AppRoutes = () => {
         element={<RouteLayoutWrapper />}
       >
 
+        {/* =========================
+            EMPLOYEE DASHBOARD
+        ========================== */}
+
         <Route
           path="/dashboard"
           element={<Dashboard />}
         />
+
+        {/* =========================
+            ADMIN DASHBOARD
+        ========================== */}
+
+        <Route
+          path="/admin"
+          element={<AdminDashboard />}
+        />
+
+        {/* =========================
+            APPLY LEAVE
+        ========================== */}
 
         <Route
           path="/apply-leave"
           element={<ApplyLeave />}
         />
 
+        {/* =========================
+            MY LEAVES
+        ========================== */}
+
         <Route
           path="/my-leaves"
           element={<MyLeaves />}
         />
+
+        {/* =========================
+            LEAVE HISTORY
+        ========================== */}
 
         <Route
           path="/leave-history"
           element={<LeaveHistory />}
         />
 
+        {/* =========================
+            PROFILE
+        ========================== */}
+
         <Route
           path="/profile"
           element={<Profile />}
         />
-        <Route
-          path="/admin"
-          element={<AdminDashboard />}
-        />
+
       </Route>
 
       {/* =========================
-          404 PAGE
+          404
       ========================== */}
 
       <Route
@@ -161,11 +219,13 @@ const AppRoutes = () => {
           isLoggedIn
             ? (
               <Navigate
-                to="/dashboard"
+                to={getHomeRoute()}
                 replace
               />
             )
-            : <NotFound />
+            : (
+              <NotFound />
+            )
         }
       />
 
