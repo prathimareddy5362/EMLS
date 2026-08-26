@@ -17,8 +17,8 @@ const createEmployee = async (
   password
 ) => {
   const [result] = await db.query(
-    `INSERT INTO employees 
-    (full_name, employee_id, department, email, password) 
+    `INSERT INTO employees
+    (full_name, employee_id, department, email, password)
     VALUES (?, ?, ?, ?, ?)`,
     [full_name, employee_id, department, email, password]
   );
