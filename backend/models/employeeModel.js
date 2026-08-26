@@ -1,24 +1,32 @@
 const db = require("../config/db");
 
-// Find employee by email
-const findByEmail = async (email) => {
+const findEmployeeByEmail = async (email) => {
   const [rows] = await db.query(
     "SELECT * FROM employees WHERE email = ?",
     [email]
   );
-  return rows;
+
+  return rows[0];
 };
 
-// Create new employee
-const createEmployee = async (name, email, password) => {
+const createEmployee = async (
+  full_name,
+  employee_id,
+  department,
+  email,
+  password
+) => {
   const [result] = await db.query(
-    "INSERT INTO employees (name, email, password) VALUES (?, ?, ?)",
-    [name, email, password]
+    `INSERT INTO employees 
+    (full_name, employee_id, department, email, password) 
+    VALUES (?, ?, ?, ?, ?)`,
+    [full_name, employee_id, department, email, password]
   );
+
   return result;
 };
 
 module.exports = {
-  findByEmail,
+  findEmployeeByEmail,
   createEmployee,
 };
