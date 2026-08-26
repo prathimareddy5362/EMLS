@@ -33,18 +33,15 @@ const MyLeaves = () => {
     const fetchLeaves = async () => {
       try {
         setLoading(true);
-
         setError('');
 
-        // JWT automatically identifies
-        // the logged-in user
         const response =
           await leaveAPI.getLeaves();
 
         if (!response.success) {
           throw new Error(
             response.message ||
-              'Failed to fetch leave requests'
+            'Failed to fetch leave requests'
           );
         }
 
@@ -62,7 +59,7 @@ const MyLeaves = () => {
 
         setError(
           error.message ||
-            'Failed to fetch leave requests'
+          'Failed to fetch leave requests'
         );
 
         setLeaves([]);
@@ -99,32 +96,75 @@ const MyLeaves = () => {
   ];
 
   // ==============================
+  // NORMALIZE DATE
+  // ==============================
+
+  const normalizeDate = (date) => {
+    if (!date) {
+      return null;
+    }
+
+    // Handles:
+    // 2026-08-27
+    // 2026-08-27T00:00:00.000Z
+    return String(date).split('T')[0];
+  };
+
+  // ==============================
   // CALCULATE DAYS
+  // Inclusive calculation
+  // Example:
+  // Aug 10 to Aug 10 = 1 day
+  // Aug 10 to Aug 12 = 3 days
   // ==============================
 
   const calculateDays = (
     startDate,
     endDate
   ) => {
-    const start = new Date(
-      `${startDate}T00:00:00`
-    );
+    const normalizedStart =
+      normalizeDate(startDate);
 
-    const end = new Date(
-      `${endDate}T00:00:00`
-    );
+    const normalizedEnd =
+      normalizeDate(endDate);
+
+    if (
+      !normalizedStart ||
+      !normalizedEnd
+    ) {
+      return 0;
+    }
+
+    const start =
+      new Date(
+        `${normalizedStart}T00:00:00`
+      );
+
+    const end =
+      new Date(
+        `${normalizedEnd}T00:00:00`
+      );
+
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime())
+    ) {
+      return 0;
+    }
 
     const difference =
       end.getTime() -
       start.getTime();
 
     const days =
-      Math.floor(
+      Math.round(
         difference /
-          (1000 * 60 * 60 * 24)
+        (1000 * 60 * 60 * 24)
       ) + 1;
 
-    return days;
+    return days > 0
+      ? days
+      : 0;
   };
 
   // ==============================
@@ -132,20 +172,24 @@ const MyLeaves = () => {
   // ==============================
 
   const formatDate = (date) => {
-    if (!date) {
+    const normalizedDate =
+      normalizeDate(date);
+
+    if (!normalizedDate) {
       return '-';
     }
 
-    const parsedDate = new Date(
-      `${date}T00:00:00`
-    );
+    const parsedDate =
+      new Date(
+        `${normalizedDate}T00:00:00`
+      );
 
     if (
       Number.isNaN(
         parsedDate.getTime()
       )
     ) {
-      return date;
+      return normalizedDate;
     }
 
     return parsedDate.toLocaleDateString(
@@ -178,7 +222,6 @@ const MyLeaves = () => {
           leave.id || index
         }
       >
-
         {/* LEAVE TYPE */}
 
         <td
@@ -273,7 +316,6 @@ const MyLeaves = () => {
             'pending' &&
             'Awaiting review'}
         </td>
-
       </tr>
     );
   };
@@ -289,22 +331,15 @@ const MyLeaves = () => {
         display: 'inline-flex',
         alignItems: 'center',
         gap: '0.5rem',
-
         background:
           'var(--primary-gradient)',
-
         color: '#fff',
-
         padding:
           '0.6rem 1.1rem',
-
         borderRadius: '10px',
-
         fontWeight: 600,
-
         boxShadow:
           '0 4px 10px rgba(99, 102, 241, 0.2)',
-
         fontSize: '0.85rem',
       }}
     >
@@ -326,12 +361,10 @@ const MyLeaves = () => {
         flexGrow: 1,
       }}
     >
-
       {/* PAGE HEADER */}
 
       <div className="page-header">
         <div>
-
           <h1 className="page-title">
             My Leaves
           </h1>
@@ -339,7 +372,6 @@ const MyLeaves = () => {
           <p className="page-subtitle">
             Track and audit your current leave requests
           </p>
-
         </div>
       </div>
 
@@ -376,7 +408,6 @@ const MyLeaves = () => {
       {/* TABLE */}
 
       <Card hoverable={false}>
-
         <Table
           headers={headers}
           data={leaves}
@@ -390,9 +421,7 @@ const MyLeaves = () => {
               : "No leave requests found. Click 'New Request' to apply!"
           }
         />
-
       </Card>
-
     </div>
   );
 };

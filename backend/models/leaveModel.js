@@ -96,6 +96,7 @@ const createLeave = async ({
   leaveType,
   startDate,
   endDate,
+  noOfDays,
   reason,
 }) => {
   const [result] = await db.query(
@@ -105,26 +106,19 @@ const createLeave = async ({
         leave_type,
         start_date,
         end_date,
+        no_of_days,
         reason,
         status,
         applied_date
       )
-
-      VALUES (
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        CURDATE()
-      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE())
     `,
     [
       userId,
       leaveType,
       startDate,
       endDate,
+      noOfDays,
       reason,
       "pending",
     ]
