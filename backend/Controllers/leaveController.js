@@ -1,259 +1,350 @@
-const leaveModel = require("../models/leaveModel");
+import React, {
+  useState,
+  useEffect,
+} from 'react';
 
-// =====================================
-// GET MY LEAVES
-// GET /api/leaves
-// Logged-in user's leaves
-// =====================================
+import { leaveAPI } from '../services/api';
 
-const getLeaves = async (req, res) => {
-  try {
-    const userId = req.user.id;
+import Table from '../components/common/Table';
+import Loader from '../components/common/Loader';
+import Card from '../components/common/Card';
 
-    const leaves =
-      await leaveModel.getLeavesByUserId(
-        userId
-      );
+const LeaveHistory = () => {
+  const [leaves, setLeaves] =
+    useState([]);
 
-    return res.status(200).json({
-      success: true,
-      leaves,
-    });
+  const [loading, setLoading] =
+    useState(true);
 
-  } catch (error) {
-    console.error(
-      "Get leaves error:",
-      error
-    );
+  const [error, setError] =
+    useState('');
 
-    return res.status(500).json({
-      success: false,
-      message:
-        "Failed to fetch leave requests",
-      error: error.message,
-    });
-  }
-};
+  // ==============================
+  // FETCH LEAVE HISTORY
+  // ==============================
 
-// =====================================
-// GET ALL LEAVES
-// GET /api/leaves/all
-// Admin only
-// =====================================
+  useEffect(() => {
+    const fetchLeaveHistory =
+      async () => {
+        try {
+          setLoading(true);
+          setError('');
 
-const getAllLeaves = async (req, res) => {
-  try {
-    const leaves =
-      await leaveModel.getAllLeaves();
+          const response =
+            await leaveAPI.getLeaves();
 
-    return res.status(200).json({
-      success: true,
-      leaves,
-    });
+          console.log(
+            'Leave History Response:',
+            response
+          );
 
-  } catch (error) {
-    console.error(
-      "Get all leaves error:",
-      error
-    );
+          if (!response?.success) {
+            throw new Error(
+              response?.message ||
+              'Failed to fetch leave history'
+            );
+          }
 
-    return res.status(500).json({
-      success: false,
-      message:
-        "Failed to fetch all leave requests",
-      error: error.message,
-    });
-  }
-};
+          const leaveData =
+            Array.isArray(response?.leaves)
+              ? response.leaves
+              : [];
 
-// =====================================
-// APPLY LEAVE
-// POST /api/leaves
-// =====================================
+          setLeaves(leaveData);
 
-const applyLeave = async (req, res) => {
-  try {
-    const userId = req.user.id;
+        } catch (error) {
+          console.error(
+            'Failed to fetch leave history:',
+            error
+          );
 
-    const {
-      leaveType,
-      startDate,
-      endDate,
-      reason,
-    } = req.body;
+          setError(
+            error.message ||
+            'Failed to fetch leave history'
+          );
 
-    // Basic validation
+          setLeaves([]);
 
-    if (
-      !leaveType ||
-      !startDate ||
-      !endDate ||
-      !reason
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "All leave details are required",
-      });
+        } finally {
+          setLoading(false);
+        }
+      };
+
+    fetchLeaveHistory();
+
+  }, []);
+
+  // ==============================
+  // NORMALIZE DATE
+  // ==============================
+
+  const normalizeDate = (date) => {
+    if (!date) {
+      return '';
     }
 
-    // Validate dates
+    return String(date)
+      .split('T')[0];
+  };
+
+  // ==============================
+  // FORMAT DATE
+  // ==============================
+
+  const formatDate = (date) => {
+    const normalizedDate =
+      normalizeDate(date);
+
+    if (!normalizedDate) {
+      return '-';
+    }
+
+    const parsedDate =
+      new Date(
+        `${normalizedDate}T00:00:00`
+      );
+
+    if (
+      Number.isNaN(
+        parsedDate.getTime()
+      )
+    ) {
+      return normalizedDate;
+    }
+
+    return parsedDate.toLocaleDateString(
+      'en-IN',
+      {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      }
+    );
+  };
+
+  // ==============================
+  // CALCULATE DAYS
+  // ==============================
+
+  const calculateDays = (
+    startDate,
+    endDate
+  ) => {
+    const startDateValue =
+      normalizeDate(startDate);
+
+    const endDateValue =
+      normalizeDate(endDate);
+
+    if (
+      !startDateValue ||
+      !endDateValue
+    ) {
+      return 0;
+    }
 
     const start =
-      new Date(`${startDate}T00:00:00`);
-
-    const end =
-      new Date(`${endDate}T00:00:00`);
-
-    if (
-      Number.isNaN(
-        start.getTime()
-      )
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid start date",
-      });
-    }
-
-    if (
-      Number.isNaN(
-        end.getTime()
-      )
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid end date",
-      });
-    }
-
-    if (end < start) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "End date cannot be before start date",
-      });
-    }
-
-    const newLeave =
-      await leaveModel.createLeave({
-        userId,
-        leaveType,
-        startDate,
-        endDate,
-        reason,
-      });
-
-    return res.status(201).json({
-      success: true,
-      message:
-        "Leave request submitted successfully",
-      leave: newLeave,
-    });
-
-  } catch (error) {
-    console.error(
-      "Apply leave error:",
-      error
-    );
-
-    return res.status(500).json({
-      success: false,
-      message:
-        "Failed to apply leave",
-      error: error.message,
-    });
-  }
-};
-
-// =====================================
-// UPDATE LEAVE STATUS
-// PATCH /api/leaves/:id
-// Admin only
-// =====================================
-
-const updateLeaveStatus = async (
-  req,
-  res
-) => {
-  try {
-    const { id } = req.params;
-
-    const {
-      status,
-      rejectionReason = "",
-    } = req.body;
-
-    const validStatuses = [
-      "pending",
-      "approved",
-      "rejected",
-    ];
-
-    if (
-      !status ||
-      !validStatuses.includes(status)
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Invalid leave status",
-      });
-    }
-
-    // Rejection reason validation
-
-    if (
-      status === "rejected" &&
-      !rejectionReason.trim()
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Rejection reason is required",
-      });
-    }
-
-    const updatedLeave =
-      await leaveModel.updateLeaveStatus(
-        id,
-        status,
-        rejectionReason
+      new Date(
+        `${startDateValue}T00:00:00`
       );
 
-    if (!updatedLeave) {
-      return res.status(404).json({
-        success: false,
-        message:
-          "Leave request not found",
-      });
+    const end =
+      new Date(
+        `${endDateValue}T00:00:00`
+      );
+
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime())
+    ) {
+      return 0;
     }
 
-    return res.status(200).json({
-      success: true,
-      message:
-        "Leave status updated successfully",
-      leave: updatedLeave,
-    });
+    const difference =
+      end.getTime() -
+      start.getTime();
 
-  } catch (error) {
-    console.error(
-      "Update leave status error:",
-      error
+    return (
+      Math.floor(
+        difference /
+        (1000 * 60 * 60 * 24)
+      ) + 1
     );
+  };
 
-    return res.status(500).json({
-      success: false,
-      message:
-        "Failed to update leave status",
-      error: error.message,
-    });
+  // ==============================
+  // LOADING
+  // ==============================
+
+  if (loading) {
+    return <Loader />;
   }
+
+  // ==============================
+  // TABLE HEADERS
+  // ==============================
+
+  const headers = [
+    'Leave Type',
+    'Start Date',
+    'End Date',
+    'Days',
+    'Reason',
+    'Status',
+    'Applied Date',
+  ];
+
+  // ==============================
+  // RENDER ROW
+  // ==============================
+
+  const renderRow = (
+    leave,
+    index
+  ) => {
+    const days =
+      calculateDays(
+        leave.startDate,
+        leave.endDate
+      );
+
+    return (
+      <tr
+        key={
+          leave.id || index
+        }
+      >
+        <td
+          style={{
+            fontWeight: 600,
+          }}
+        >
+          {leave.leaveType || '-'}
+        </td>
+
+        <td>
+          {formatDate(
+            leave.startDate
+          )}
+        </td>
+
+        <td>
+          {formatDate(
+            leave.endDate
+          )}
+        </td>
+
+        <td>
+          {days} {days === 1
+            ? 'day'
+            : 'days'}
+        </td>
+
+        <td
+          title={leave.reason}
+          style={{
+            maxWidth: '250px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {leave.reason || '-'}
+        </td>
+
+        <td>
+          <span
+            className={
+              `glass-badge glass-badge-${leave.status}`
+            }
+          >
+            {leave.status || 'pending'}
+          </span>
+        </td>
+
+        <td>
+          {formatDate(
+            leave.appliedDate
+          )}
+        </td>
+      </tr>
+    );
+  };
+
+  // ==============================
+  // PAGE
+  // ==============================
+
+  return (
+    <div
+      style={{
+        flexGrow: 1,
+      }}
+    >
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">
+            Leave History
+          </h1>
+
+          <p className="page-subtitle">
+            View your complete leave request history
+          </p>
+        </div>
+      </div>
+
+      {/* ERROR */}
+
+      {error && (
+        <div
+          style={{
+            background:
+              'rgba(239, 68, 68, 0.1)',
+
+            border:
+              '1px solid var(--danger-glow)',
+
+            borderRadius: '8px',
+
+            padding:
+              '0.75rem 1rem',
+
+            color:
+              'var(--danger-text)',
+
+            fontSize:
+              '0.85rem',
+
+            marginBottom:
+              '1rem',
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      {/* HISTORY TABLE */}
+
+      <Card hoverable={false}>
+        <Table
+          headers={headers}
+          data={
+            Array.isArray(leaves)
+              ? leaves
+              : []
+          }
+          renderRow={renderRow}
+          searchPlaceholder="Search leave history..."
+          searchField="leaveType"
+          noDataMessage={
+            error
+              ? 'Unable to load leave history.'
+              : 'No leave history found.'
+          }
+        />
+      </Card>
+    </div>
+  );
 };
 
-module.exports = {
-  getLeaves,
-  getAllLeaves,
-  applyLeave,
-  updateLeaveStatus,
-};
+export default LeaveHistory;

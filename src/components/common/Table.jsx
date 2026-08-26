@@ -1,101 +1,258 @@
 import React, { useState } from 'react';
+
 import Input from './Input';
-import { IoSearchOutline } from 'react-icons/io5';
+
+import {
+  IoSearchOutline,
+} from 'react-icons/io5';
 
 const Table = ({
   headers = [],
   data = [],
   renderRow,
   searchPlaceholder = 'Search records...',
-  searchField = '', // Field name to search, or empty string to search all text fields
+  searchField = '',
   actions,
-  noDataMessage = 'No records found'
+  noDataMessage = 'No records found',
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] =
+    useState('');
 
-  const filteredData = data.filter((item) => {
-    if (!searchTerm) return true;
-    
-    const searchLower = searchTerm.toLowerCase();
+  // ==============================
+  // SAFE ARRAYS
+  // ==============================
 
-    if (searchField) {
-      const val = item[searchField];
-      return val && String(val).toLowerCase().includes(searchLower);
-    }
+  const safeHeaders =
+    Array.isArray(headers)
+      ? headers
+      : [];
 
-    // Search across all text/number fields in the object
-    return Object.values(item).some((value) => {
-      if (value === null || value === undefined) return false;
-      return String(value).toLowerCase().includes(searchLower);
+  const safeData =
+    Array.isArray(data)
+      ? data
+      : [];
+
+  // ==============================
+  // FILTER DATA
+  // ==============================
+
+  const filteredData =
+    safeData.filter((item) => {
+      if (!searchTerm) {
+        return true;
+      }
+
+      if (
+        !item ||
+        typeof item !== 'object'
+      ) {
+        return false;
+      }
+
+      const searchLower =
+        searchTerm.toLowerCase();
+
+      // Search specific field
+
+      if (searchField) {
+        const value =
+          item[searchField];
+
+        return String(
+          value || ''
+        )
+          .toLowerCase()
+          .includes(searchLower);
+      }
+
+      // Search all fields
+
+      return Object.values(item).some(
+        (value) => {
+          if (
+            value === null ||
+            value === undefined
+          ) {
+            return false;
+          }
+
+          return String(value)
+            .toLowerCase()
+            .includes(searchLower);
+        }
+      );
     });
-  });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      {/* Table Header Action Bar */}
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1rem',
+      }}
+    >
+      {/* ==========================
+          TABLE HEADER ACTION BAR
+      ========================== */}
+
       {(searchPlaceholder || actions) && (
         <div
           style={{
             display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+            justifyContent:
+              'space-between',
+            alignItems:
+              'center',
             gap: '1rem',
-            flexWrap: 'wrap',
+            flexWrap:
+              'wrap',
           }}
         >
+          {/* SEARCH */}
+
           {searchPlaceholder && (
-            <div style={{ width: '100%', maxWidth: '300px' }}>
+            <div
+              style={{
+                width: '100%',
+                maxWidth: '300px',
+              }}
+            >
               <Input
                 type="text"
-                placeholder={searchPlaceholder}
+                placeholder={
+                  searchPlaceholder
+                }
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) =>
+                  setSearchTerm(
+                    e.target.value
+                  )
+                }
                 icon={IoSearchOutline}
               />
             </div>
           )}
-          {actions && <div style={{ display: 'flex', gap: '0.75rem', marginLeft: 'auto' }}>{actions}</div>}
+
+          {/* ACTIONS */}
+
+          {actions && (
+            <div
+              style={{
+                display: 'flex',
+                gap: '0.75rem',
+                marginLeft: 'auto',
+              }}
+            >
+              {actions}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Main Table Grid */}
-      <div className="glass-table-container glass-scroll">
+      {/* ==========================
+          MAIN TABLE
+      ========================== */}
+
+      <div
+        className="
+          glass-table-container
+          glass-scroll
+        "
+      >
         {filteredData.length === 0 ? (
           <div
             style={{
-              padding: '3rem 1.5rem',
-              textAlign: 'center',
-              color: 'var(--text-secondary)',
-              fontSize: '1rem',
+              padding:
+                '3rem 1.5rem',
+
+              textAlign:
+                'center',
+
+              color:
+                'var(--text-secondary)',
+
+              fontSize:
+                '1rem',
             }}
           >
             {noDataMessage}
           </div>
         ) : (
           <table className="glass-table">
+
+            {/* TABLE HEADERS */}
+
             <thead>
               <tr>
-                {headers.map((header, idx) => (
-                  <th key={idx}>{header}</th>
-                ))}
+                {safeHeaders.map(
+                  (
+                    header,
+                    index
+                  ) => (
+                    <th
+                      key={index}
+                    >
+                      {header}
+                    </th>
+                  )
+                )}
               </tr>
             </thead>
+
+            {/* TABLE BODY */}
+
             <tbody>
-              {filteredData.map((item, idx) => {
-                if (renderRow) {
-                  return renderRow(item, idx);
+              {filteredData.map(
+                (
+                  item,
+                  index
+                ) => {
+                  // Custom row renderer
+
+                  if (
+                    typeof renderRow ===
+                    'function'
+                  ) {
+                    return renderRow(
+                      item,
+                      index
+                    );
+                  }
+
+                  // Default row renderer
+
+                  return (
+                    <tr
+                      key={
+                        item?.id ||
+                        index
+                      }
+                    >
+                      {Object.keys(
+                        item || {}
+                      ).map(
+                        (
+                          key,
+                          subIndex
+                        ) => (
+                          <td
+                            key={
+                              subIndex
+                            }
+                          >
+                            {String(
+                              item[key] ??
+                              ''
+                            )}
+                          </td>
+                        )
+                      )}
+                    </tr>
+                  );
                 }
-                
-                // Fallback basic cell rendering
-                return (
-                  <tr key={idx}>
-                    {Object.keys(item).map((key, subIdx) => (
-                      <td key={subIdx}>{String(item[key])}</td>
-                    ))}
-                  </tr>
-                );
-              })}
+              )}
             </tbody>
+
           </table>
         )}
       </div>
