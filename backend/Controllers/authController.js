@@ -45,6 +45,56 @@ const register = async (req, res) => {
   }
 };
 
+
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const employee =
+      await employeeModel.findEmployeeByEmail(email);
+
+    if (!employee) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      password,
+      employee.password
+    );
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Login successful",
+      employee: {
+        id: employee.id,
+        full_name: employee.full_name,
+        email: employee.email,
+        department: employee.department,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Login failed",
+      error: error.message,
+    });
+  }
+};
+
+
 module.exports = {
   register,
+  login,
 };
