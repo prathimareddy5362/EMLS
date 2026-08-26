@@ -106,7 +106,6 @@ const createLeave = async ({
         leave_type,
         start_date,
         end_date,
-        no_of_days,
         reason,
         status,
         applied_date
