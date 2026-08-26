@@ -18,7 +18,6 @@ import LeaveRequests from '../pages/LeaveRequests';
 import Reports from '../pages/Reports';
 import NotFound from '../pages/NotFound';
 
-// Layout wrapper for protected routes
 const RouteLayoutWrapper = ({ allowedRoles }) => {
   return (
     <ProtectedRoute allowedRoles={allowedRoles}>
@@ -30,28 +29,53 @@ const RouteLayoutWrapper = ({ allowedRoles }) => {
 };
 
 const AppRoutes = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
 
-  // Root redirect helper based on roles
+  // Wait until authentication check is complete
+  if (loading) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          color: 'white',
+          fontSize: '18px',
+        }}
+      >
+        Loading...
+      </div>
+    );
+  }
+
   const getRootRedirect = () => {
     if (!isAuthenticated || !user) {
-      return <Navigate to="/login" replace={true} />;
+      return <Navigate to="/login" replace />;
     }
-    return user.role === 'admin' 
-      ? <Navigate to="/admin" replace={true} /> 
-      : <Navigate to="/dashboard" replace={true} />;
+
+    return user.role === 'admin'
+      ? <Navigate to="/admin" replace />
+      : <Navigate to="/dashboard" replace />;
   };
 
   return (
     <Routes>
-      {/* Public routes */}
-      <Route path="/login" element={!isAuthenticated ? <Login /> : getRootRedirect()} />
-      <Route path="/register" element={!isAuthenticated ? <Register /> : getRootRedirect()} />
+      {/* Public Routes */}
+      <Route
+        path="/login"
+        element={!isAuthenticated ? <Login /> : getRootRedirect()}
+      />
 
-      {/* Root redirect */}
+      <Route
+        path="/register"
+        element={!isAuthenticated ? <Register /> : getRootRedirect()}
+      />
+
+      {/* Root */}
       <Route path="/" element={getRootRedirect()} />
 
-      {/* Employee Protected Routes */}
+      {/* Employee Routes */}
       <Route element={<RouteLayoutWrapper allowedRoles={['employee']} />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/apply-leave" element={<ApplyLeave />} />
@@ -59,7 +83,7 @@ const AppRoutes = () => {
         <Route path="/leave-history" element={<LeaveHistory />} />
       </Route>
 
-      {/* Admin Protected Routes */}
+      {/* Admin Routes */}
       <Route element={<RouteLayoutWrapper allowedRoles={['admin']} />}>
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/employees" element={<Employees />} />
@@ -67,15 +91,17 @@ const AppRoutes = () => {
         <Route path="/reports" element={<Reports />} />
       </Route>
 
-      {/* Shared Protected Routes (both admin and employee) */}
-      <Route element={<RouteLayoutWrapper allowedRoles={['employee', 'admin']} />}>
+      {/* Shared Routes */}
+      <Route
+        element={
+          <RouteLayoutWrapper allowedRoles={['employee', 'admin']} />
+        }
+      >
         <Route path="/profile" element={<Profile />} />
       </Route>
 
-      {/* 404 Route */}
-      <Route element={<RouteLayoutWrapper allowedRoles={['employee', 'admin']} />}>
-        <Route path="*" element={<NotFound />} />
-      </Route>
+      {/* 404 */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 };

@@ -4,7 +4,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import Card from '../components/common/Card';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
-import { IoMailOutline, IoLockClosedOutline } from 'react-icons/io5';
+import {
+  IoMailOutline,
+  IoLockClosedOutline
+} from 'react-icons/io5';
 
 const Login = () => {
   const { login } = useAuth();
@@ -18,42 +21,22 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setError('');
     setLoading(true);
 
     try {
-      const loggedUser = await login(email, password);
-      if (loggedUser.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
-    } catch (err) {
-      setError(err.message || 'Failed to sign in. Please check your credentials.');
-    } finally {
-      setLoading(false);
-    }
-  };
+      await login(email, password);
 
-  // Demo Quick Login helper
-  const handleQuickLogin = async (role) => {
-    const testEmail = role === 'admin' ? 'admin@elms.com' : 'employee@elms.com';
-    const testPass = 'password';
-    
-    setEmail(testEmail);
-    setPassword(testPass);
-    setError('');
-    setLoading(true);
+      // Successful login
+      navigate('/dashboard');
 
-    try {
-      const loggedUser = await login(testEmail, testPass);
-      if (loggedUser.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
     } catch (err) {
-      setError(err.message);
+      setError(
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to sign in. Please check your credentials.'
+      );
     } finally {
       setLoading(false);
     }
@@ -76,10 +59,16 @@ const Login = () => {
           width: '100%',
           maxWidth: '420px',
           padding: '2.5rem 2rem',
-          boxShadow: 'var(--glass-shadow), 0 20px 25px -5px rgba(0, 0, 0, 0.4)',
+          boxShadow:
+            'var(--glass-shadow), 0 20px 25px -5px rgba(0, 0, 0, 0.4)',
         }}
       >
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <div
+          style={{
+            textAlign: 'center',
+            marginBottom: '2rem',
+          }}
+        >
           <div
             style={{
               width: '48px',
@@ -98,8 +87,23 @@ const Login = () => {
           >
             E
           </div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.25rem' }}>Welcome Back</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+
+          <h2
+            style={{
+              fontSize: '1.75rem',
+              fontWeight: 700,
+              marginBottom: '0.25rem',
+            }}
+          >
+            Welcome Back
+          </h2>
+
+          <p
+            style={{
+              color: 'var(--text-muted)',
+              fontSize: '0.9rem',
+            }}
+          >
             Sign in to manage your leaves
           </p>
         </div>
@@ -120,7 +124,14 @@ const Login = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem',
+          }}
+        >
           <Input
             label="Email Address"
             type="email"
@@ -152,7 +163,14 @@ const Login = () => {
               color: 'var(--text-secondary)',
             }}
           >
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                cursor: 'pointer',
+              }}
+            >
               <input
                 type="checkbox"
                 checked={rememberMe}
@@ -164,52 +182,56 @@ const Login = () => {
                   height: '15px',
                 }}
               />
+
               <span>Remember me</span>
             </label>
+
             <a
               href="#"
               onClick={(e) => {
                 e.preventDefault();
-                alert('Reset password instructions sent if backend is configured.');
+                alert('Password reset feature is not available yet.');
               }}
-              style={{ color: 'var(--primary)', fontWeight: 500 }}
+              style={{
+                color: 'var(--primary)',
+                fontWeight: 500,
+              }}
             >
               Forgot Password?
             </a>
           </div>
 
-          <Button type="submit" loading={loading} style={{ width: '100%', marginTop: '0.5rem' }}>
+          <Button
+            type="submit"
+            loading={loading}
+            style={{
+              width: '100%',
+              marginTop: '0.5rem',
+            }}
+          >
             Sign In
           </Button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-          Don't have an account?{' '}
-          <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 600 }}>
-            Register here
-          </Link>
-        </div>
-
-        {/* Quick Demo Acccess Area */}
         <div
           style={{
-            marginTop: '2rem',
-            paddingTop: '1.5rem',
-            borderTop: '1px solid rgba(255, 255, 255, 0.05)',
             textAlign: 'center',
+            marginTop: '1.5rem',
+            fontSize: '0.9rem',
+            color: 'var(--text-muted)',
           }}
         >
-          <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', display: 'block', marginBottom: '0.75rem' }}>
-            Quick Demo Login
-          </span>
-          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-            <Button variant="secondary" onClick={() => handleQuickLogin('employee')} style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem' }}>
-              Employee Role
-            </Button>
-            <Button variant="secondary" onClick={() => handleQuickLogin('admin')} style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem' }}>
-              Admin Role
-            </Button>
-          </div>
+          Don't have an account?{' '}
+
+          <Link
+            to="/register"
+            style={{
+              color: 'var(--primary)',
+              fontWeight: 600,
+            }}
+          >
+            Register here
+          </Link>
         </div>
       </Card>
     </div>
