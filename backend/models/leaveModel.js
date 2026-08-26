@@ -109,7 +109,7 @@ const createLeave = async ({
         status,
         applied_date
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE())
+      VALUES (?, ?, ?, ?, ?, ?, CURDATE())
     `,
     [
       userId,
