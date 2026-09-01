@@ -5,6 +5,10 @@ This is a premium, state-of-the-art **Glassmorphic React.js** frontend for an Em
 To enable standalone exploration without a backend server, this application comes equipped with a **localStorage-backed Mock Database Layer** that simulates database updates in real-time.
 
 ---
+Live Demo  
+
+[![Live Demo](https://img.shields.io/badge/Live-Demo-success)](https://emls-frontend.onrender.com)
+
 
 ## 🚀 Features
 
